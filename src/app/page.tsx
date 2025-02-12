@@ -210,12 +210,12 @@ export default function WordQuiz() {
               <p className="font-semibold text-black">Part of Speech: {currentWord?.speech}</p>
               <p className="font-semibold text-black">Level: {currentWord?.level}</p>
               <p className="mt-2 text-black">Meaning: {currentWord?.meaning}</p>
-              <p className="mt-2 italic text-black">Example: {randomSentence.replace(currentWord?.name, '_'.repeat(currentWord?.name.length))}</p>
+              <p className="mt-2 italic text-black">Example: {randomSentence?.replace(currentWord?.name || '', '_'.repeat(currentWord?.name?.length || 0))}</p>
             </div>
 
             {/* Letter boxes */}
             <div className="flex justify-center gap-2 my-6">
-              {Array.from({length: currentWord?.name.length }).map((_, index) => (
+              {Array.from({length: currentWord?.name?.length || 0}).map((_, index) => (
                 <div
                   key={index}
                   className={`
