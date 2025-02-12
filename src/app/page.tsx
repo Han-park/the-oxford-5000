@@ -108,7 +108,7 @@ export default function WordQuiz() {
 
   useEffect(() => {
     fetchRandomWord()
-  }, [])
+  }, [fetchRandomWord])
 
   // Log currentWord whenever it changes
   useEffect(() => {
