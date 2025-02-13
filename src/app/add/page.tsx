@@ -96,7 +96,7 @@ export default function AddPage() {
           ...parsedData,
           source: 'custom'
         })
-      } catch (error) {
+      } catch (_) {
         console.error('JSON Parse Error:', content)
         throw new Error('Failed to parse AI response')
       }

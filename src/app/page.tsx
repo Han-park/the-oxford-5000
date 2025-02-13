@@ -108,9 +108,10 @@ export default function WordQuiz() {
     }
   }
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     void fetchRandomWord()
+    // We want this effect to run only once when component mounts
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Log currentWord whenever it changes
