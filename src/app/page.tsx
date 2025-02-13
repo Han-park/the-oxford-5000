@@ -2,6 +2,7 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { useState, useEffect } from 'react'
+import { useAuth } from '../contexts/AuthContext'
 
 // Define the Word type
 interface Word {
@@ -38,6 +39,7 @@ export default function WordQuiz() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [history, setHistory] = useState<LogEntry[]>([])
+  const { signOut } = useAuth()
 
   // Function to get a random sentence from example_sentence
   const getRandomSentence = (sentences: string) => {
@@ -201,6 +203,12 @@ export default function WordQuiz() {
 
   return (
     <div className="min-h-screen p-8 max-w-2xl mx-auto text-black">
+      <button
+        onClick={signOut}
+        className="absolute top-4 right-4 px-4 py-2 bg-gray-200 text-gray-600 rounded hover:bg-gray-600 hover:text-white"
+      >
+        Sign Out
+      </button>
       <div className="space-y-6">
         <div className="bg-white p-6 rounded-lg shadow-md">
           <h2 className="text-2xl font-bold mb-4 text-black">Word Quiz</h2>
