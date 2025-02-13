@@ -108,6 +108,7 @@ export default function WordQuiz() {
     }
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     void fetchRandomWord()
   }, [])
