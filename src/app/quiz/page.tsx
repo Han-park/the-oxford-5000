@@ -1,7 +1,7 @@
 'use client'
 
 import { createClient } from '@supabase/supabase-js'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import ProtectedRoute from '../../components/ProtectedRoute'
 
@@ -43,14 +43,14 @@ export default function QuizPage() {
   const { signOut } = useAuth()
 
   // Function to get a random sentence from example_sentence
-  const getRandomSentence = (sentences: string) => {
+  const getRandomSentence = useCallback((sentences: string) => {
     const sentenceArray = sentences.split('. ')
     const randomIndex = Math.floor(Math.random() * sentenceArray.length)
     return sentenceArray[randomIndex].trim()
-  }
+  }, [])
 
   // Add this function to fetch history
-  const fetchHistory = async (wordId: number) => {
+  const fetchHistory = useCallback(async (wordId: number) => {
     const { data, error } = await supabase
       .from('log')
       .select('*')
@@ -63,10 +63,10 @@ export default function QuizPage() {
     }
 
     setHistory(data || [])
-  }
+  }, [])
 
   // Fetch a random word from Supabase
-  const fetchRandomWord = async () => {
+  const fetchRandomWord = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('words-v1')
@@ -107,11 +107,11 @@ export default function QuizPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [getRandomSentence, fetchHistory])
 
   useEffect(() => {
     void fetchRandomWord()
-  }, [])
+  }, [fetchRandomWord])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const input = e.target.value.toLowerCase()

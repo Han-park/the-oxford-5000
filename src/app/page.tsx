@@ -18,14 +18,6 @@ interface Word {
   source: string
 }
 
-// Add this to your existing interfaces
-interface LogEntry {
-  id: number
-  created_at: string
-  words_id: number
-  result: number
-}
-
 // Initialize Supabase client
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
