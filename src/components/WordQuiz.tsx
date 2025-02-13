@@ -109,7 +109,7 @@ export default function WordQuiz() {
   }
 
   useEffect(() => {
-    fetchRandomWord()
+    void fetchRandomWord()
   }, [])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {

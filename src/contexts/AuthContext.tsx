@@ -1,6 +1,6 @@
 'use client'
 
-import { createClient } from '@supabase/supabase-js'
+import { createClient, User } from '@supabase/supabase-js'
 import { useRouter } from 'next/navigation'
 import { createContext, useContext, useEffect, useState } from 'react'
 
@@ -10,7 +10,7 @@ const supabase = createClient(
 )
 
 interface AuthContextType {
-  user: any
+  user: User | null
   loading: boolean
   signOut: () => Promise<void>
 }
@@ -22,7 +22,7 @@ const AuthContext = createContext<AuthContextType>({
 })
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
 
