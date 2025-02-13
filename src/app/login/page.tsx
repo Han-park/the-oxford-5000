@@ -35,7 +35,7 @@ export default function Login() {
       if (data.user) {
         router.push('/quiz')
       }
-    } catch (_) {
+    } catch {
       setError('An unexpected error occurred')
     } finally {
       setLoading(false)
