@@ -3,6 +3,8 @@
 import { createClient } from '@supabase/supabase-js'
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import ProtectedRoute from '../components/ProtectedRoute'
+import Link from 'next/link'
 
 // Define the Word type
 interface Word {
@@ -12,6 +14,8 @@ interface Word {
   meaning: string
   level: string
   example_sentence: string
+  created_at: string
+  source: string
 }
 
 // Add this to your existing interfaces
@@ -28,165 +32,36 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
-export default function WordQuiz() {
-  const [currentWord, setCurrentWord] = useState<Word | null>(null)
-  const [userInput, setUserInput] = useState('')
-  const [showResult, setShowResult] = useState(false)
-  const [isCorrect, setIsCorrect] = useState(false)
-  const [randomSentence, setRandomSentence] = useState('')
-  const [showAnswer, setShowAnswer] = useState(false)
-  const [revealedHints, setRevealedHints] = useState<number[]>([])
+export default function DashboardPage() {
+  const [words, setWords] = useState<Word[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [history, setHistory] = useState<LogEntry[]>([])
   const { signOut } = useAuth()
 
-  // Function to get a random sentence from example_sentence
-  const getRandomSentence = (sentences: string) => {
-    const sentenceArray = sentences.split('. ')
-    const randomIndex = Math.floor(Math.random() * sentenceArray.length)
-    return sentenceArray[randomIndex].trim()
-  }
-
-  // Add this function to fetch history
-  const fetchHistory = async (wordId: number) => {
-    const { data, error } = await supabase
-      .from('log')
-      .select('*')
-      .eq('words_id', wordId)
-      .order('created_at', { ascending: true })
-
-    if (error) {
-      console.error('Error fetching history:', error)
-      return
-    }
-
-    setHistory(data || [])
-  }
-
-  // Fetch a random word from Supabase
-  const fetchRandomWord = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('words-v1')
-        .select('*')
-
-      if (error) {
-        console.error('Error fetching words:', error)
-        setError(error instanceof Error ? error.message : 'An unknown error occurred')
-        return
-      }
-
-      if (!data || data.length === 0) {
-        console.error('No words found in database')
-        setError('No words found in database')
-        return
-      }
-
-      const randomIndex = Math.floor(Math.random() * data.length)
-      const randomWord = data[randomIndex]
-
-      setCurrentWord(randomWord)
-      setRandomSentence(getRandomSentence(randomWord.example_sentence))
-      setUserInput('')
-      setShowResult(false)
-      setShowAnswer(false)
-      setRevealedHints([])
-      
-      // Fetch history for the new word
-      const wordId = randomWord.id;
-      await fetchHistory(wordId)
-    } catch (error) {
-      console.error('Error:', error)
-      if (error instanceof Error) {
-        setError(error.message)
-      } else {
-        setError('An unknown error occurred')
-      }
-    } finally {
-      setLoading(false)
-    }
-  }
-
   useEffect(() => {
-    void fetchRandomWord()
-    // We want this effect to run only once when component mounts
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const fetchWords = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('words-v1')
+          .select('*')
+          .order('created_at', { ascending: false })
+
+        if (error) {
+          throw error
+        }
+
+        setWords(data || [])
+      } catch (err) {
+        console.error('Error fetching words:', err)
+        setError(err instanceof Error ? err.message : 'An error occurred while fetching words')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    void fetchWords()
   }, [])
 
-  // Log currentWord whenever it changes
-  useEffect(() => {
-    console.log('Current Word:', currentWord)
-  }, [currentWord])
-
-  // Log the length of history whenever it changes
-  useEffect(() => {
-    console.log('History length:', history.length);
-  }, [history])
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const input = e.target.value.toLowerCase()
-    setUserInput(input)
-
-    if (input.length === currentWord?.name.length) {
-      checkAnswer(input)
-    }
-  }
-
-  const checkAnswer = async (input: string) => {
-    const correct = input.toLowerCase() === currentWord?.name.toLowerCase()
-    setIsCorrect(correct)
-    setShowResult(true)
-
-    // Log the result to Supabase
-    if (currentWord) {
-      const { error } = await supabase
-        .from('log')
-        .insert({
-          words_id: currentWord.id,
-          result: correct ? 1 : 0
-        })
-
-      if (error) {
-        console.error('Error logging result:', error)
-      }
-    }
-  }
-
-  const handleNextWord = () => {
-    fetchRandomWord()
-  }
-
-  const handleTryAgain = () => {
-    setShowResult(false)
-    setUserInput('')
-  }
-
-  const showLetterHint = () => {
-    if (!currentWord) return;
-    
-    // Calculate how many letters to reveal (1/3 of the word length)
-    const numLettersToReveal = Math.ceil(currentWord.name.length / 3);
-    
-    // Get available indices that haven't been revealed yet
-    const availableIndices = Array.from({ length: currentWord.name.length }, (_, i) => i)
-      .filter(index => !revealedHints.includes(index));
-    
-    // If we've already revealed all possible hints, return
-    if (availableIndices.length === 0) return;
-    
-    // Randomly select indices to reveal
-    const newHints = [];
-    for (let i = 0; i < Math.min(numLettersToReveal, availableIndices.length); i++) {
-      const randomIndex = Math.floor(Math.random() * availableIndices.length);
-      newHints.push(availableIndices[randomIndex]);
-      availableIndices.splice(randomIndex, 1);
-    }
-    
-    setRevealedHints([...revealedHints, ...newHints]);
-  }
-
-  // Update this function to format the date in local timezone
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
     return date.toLocaleString('en-US', {
@@ -196,150 +71,109 @@ export default function WordQuiz() {
       hour: '2-digit',
       minute: '2-digit',
       hour12: true,
-      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone // Use local timezone
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
     })
   }
 
-  if (loading) return <div>Loading...</div>
-  if (error) return <div>Error: {error}</div>
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+    </div>
+  )
+
+  if (error) return (
+    <div className="min-h-screen p-8">
+      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+        <p>Error: {error}</p>
+      </div>
+    </div>
+  )
 
   return (
-    <div className="min-h-screen p-8 max-w-2xl mx-auto text-black">
-      <button
-        onClick={signOut}
-        className="absolute top-4 right-4 px-4 py-2 bg-gray-200 text-gray-600 rounded hover:bg-gray-600 hover:text-white"
-      >
-        Sign Out
-      </button>
-      <div className="space-y-6">
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h2 className="text-2xl font-bold mb-4 text-black">Word Quiz</h2>
-          
-          <div className="space-y-4">
-            <div>
-              <p className="font-semibold text-black">Part of Speech: {currentWord?.speech}</p>
-              <p className="font-semibold text-black">Level: {currentWord?.level}</p>
-              <p className="mt-2 text-black">Meaning: {currentWord?.meaning}</p>
-              <p className="mt-2 italic text-black">Example: {randomSentence?.replace(currentWord?.name || '', '_'.repeat(currentWord?.name?.length || 0))}</p>
-            </div>
-
-            {/* Letter boxes */}
-            <div className="flex justify-center gap-2 my-6">
-              {Array.from({length: currentWord?.name?.length || 0}).map((_, index) => (
-                <div
-                  key={index}
-                  className={`
-                    w-12 h-12 border-2 flex items-center justify-center text-xl font-bold
-                    ${showResult && isCorrect ? 'border-green-500 bg-green-100' : ''}
-                    ${showResult && !isCorrect ? 'border-red-500 bg-red-100' : ''}
-                    ${!showResult ? 'border-gray-300' : ''}
-                  `}
-                >
-                  {revealedHints.includes(index) ? currentWord?.name[index] : (userInput[index] || '')}
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-4">
-              <input
-                type="text"
-                value={userInput}
-                onChange={handleInputChange}
-                className="w-full p-2 border rounded"
-                placeholder="Type your answer..."
-                maxLength={currentWord?.name.length}
-                disabled={showResult && isCorrect}
-                autoFocus
-              />
-            </div>
-
-            {/* Hint and Show Answer buttons */}
-            <div className="flex gap-2 justify-center mt-4">
-              <button
-                onClick={showLetterHint}
-                className="px-4 py-2 bg-gray-200 text-gray-600 rounded hover:bg-gray-600 hover:text-white"
-                disabled={showResult && isCorrect}
-              >
-                Show Hint
-              </button>
-              <button
-                onClick={() => setShowAnswer(true)}
-                className="px-4 py-2 bg-gray-200 text-gray-600 rounded hover:bg-gray-600 hover:text-white"
-                disabled={showResult && isCorrect}
-              >
-                Show Answer
-              </button>
-            </div>
+    <ProtectedRoute>
+      <div className="min-h-screen p-8">
+        {/* Header */}
+        <div className="max-w-7xl mx-auto mb-8 flex justify-between items-center">
+          <h1 className="text-3xl font-bold text-black">Word Dashboard</h1>
+          <div className="flex gap-4">
+            <Link
+              href="/quiz"
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+            >
+              Take Quiz
+            </Link>
+            <Link
+              href="/add"
+              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
+            >
+              Add Word
+            </Link>
+            <button
+              onClick={signOut}
+              className="px-4 py-2 bg-gray-200 text-gray-600 rounded hover:bg-gray-600 hover:text-white transition-colors"
+            >
+              Sign Out
+            </button>
           </div>
         </div>
 
-        {showResult && (
-          <div className={`p-4 rounded-lg ${isCorrect ? 'bg-green-100' : 'bg-red-100'}`}>
-            <p className="text-center font-bold">
-              {isCorrect ? 'Correct! 🎉' : 'Try again!'}
-            </p>
-            {showAnswer && !isCorrect && (
-              <p className="text-center mt-2">The answer is: {currentWord?.name}</p>
-            )}
-            {(isCorrect || showAnswer) ? (
-              <button
-                onClick={handleNextWord}
-                className="mt-4 w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
-              >
-                Next Word
-              </button>
-            ) : (
-              <button
-                onClick={handleTryAgain}
-                className="mt-4 w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
-              >
-                Try Again
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* History Section */}
-        <div className="bg-white p-6 rounded-lg shadow-md mt-8">
-          <h3 className="text-xl font-bold mb-4 text-black">Attempt History</h3>
-          {history.length > 0 ? (
+        {/* Word List */}
+        <div className="max-w-7xl mx-auto">
+          <div className="bg-white shadow-md rounded-lg overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="min-w-full table-auto">
-                <thead>
-                  <tr className="bg-gray-100">
-                    <th className="px-4 py-2 text-left">#</th>
-                    <th className="px-4 py-2 text-left">Date</th>
-                    <th className="px-4 py-2 text-left">Result</th>
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Word</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Speech</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Level</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Meaning</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Example</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Added</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Source</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {history.map((entry, index) => (
-                    <tr key={entry.id} className="border-t">
-                      <td className="px-4 py-2">{index + 1}</td>
-                      <td className="px-4 py-2">{formatDate(entry.created_at)}</td>
-                      <td className="px-4 py-2">
-                        <span 
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                            ${entry.result === 1 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-red-100 text-red-800'
-                            }`}
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {words.map((word) => (
+                    <tr key={word.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">{word.name}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">{word.speech}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                          ${word.level === 'C2' ? 'bg-purple-100 text-purple-800' :
+                            word.level === 'C1' ? 'bg-blue-100 text-blue-800' :
+                            word.level === 'B2' ? 'bg-green-100 text-green-800' :
+                            word.level === 'B1' ? 'bg-yellow-100 text-yellow-800' :
+                            word.level === 'A2' ? 'bg-orange-100 text-orange-800' :
+                            'bg-red-100 text-red-800'}`}
                         >
-                          {entry.result === 1 ? 'Correct' : 'Wrong'}
+                          {word.level}
                         </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm text-gray-900">{word.meaning}</div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm text-gray-900">{word.example_sentence}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-500">{formatDate(word.created_at)}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-500">{word.source}</div>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          ) : (
-            <div className="text-center py-8">
-              <p className="text-gray-500">There is no history</p>
-            </div>
-          )}
+          </div>
         </div>
       </div>
-    </div>
+    </ProtectedRoute>
   )
 }
