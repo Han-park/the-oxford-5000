@@ -51,15 +51,30 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null)
   const [expandedWords, setExpandedWords] = useState<number[]>([])
   const [currentDate, setCurrentDate] = useState(new Date())
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalWords, setTotalWords] = useState(0)
+  const wordsPerPage = 50
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch words
+        // Fetch total word count
+        const { count, error: countError } = await supabase
+          .from('words-v1')
+          .select('*', { count: 'exact', head: true })
+
+        if (countError) throw countError
+        setTotalWords(count || 0)
+
+        // Fetch paginated words
+        const from = (currentPage - 1) * wordsPerPage
+        const to = from + wordsPerPage - 1
+
         const { data: wordsData, error: wordsError } = await supabase
           .from('words-v1')
           .select('*')
           .order('created_at', { ascending: false })
+          .range(from, to)
 
         if (wordsError) throw wordsError
         setWords(wordsData || [])
@@ -125,7 +140,7 @@ export default function DashboardPage() {
     }
 
     void fetchData()
-  }, [currentDate])
+  }, [currentPage])
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -303,6 +318,16 @@ export default function DashboardPage() {
     )
   }
 
+  const totalPages = Math.ceil(totalWords / wordsPerPage)
+
+  const handlePageChange = (direction: 'prev' | 'next') => {
+    if (direction === 'prev' && currentPage > 1) {
+      setCurrentPage(prev => prev - 1)
+    } else if (direction === 'next' && currentPage < totalPages) {
+      setCurrentPage(prev => prev + 1)
+    }
+  }
+
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
@@ -331,6 +356,30 @@ export default function DashboardPage() {
         {/* Word List */}
         <div className="max-w-7xl mx-auto">
           <div className="bg-white shadow-md rounded-lg overflow-hidden">
+            {/* Pagination Controls */}
+            <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-200">
+              <div className="text-sm text-gray-700">
+                Showing words {((currentPage - 1) * wordsPerPage) + 1} to {Math.min(currentPage * wordsPerPage, totalWords)} of {totalWords}
+              </div>
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => handlePageChange('prev')}
+                  disabled={currentPage === 1}
+                  className={`p-2 rounded-full ${currentPage === 1 ? 'text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:bg-gray-100'}`}
+                >
+                  <ChevronLeftIcon className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={() => handlePageChange('next')}
+                  disabled={currentPage >= totalPages}
+                  className={`p-2 rounded-full ${currentPage >= totalPages ? 'text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:bg-gray-100'}`}
+                >
+                  <ChevronRightIcon className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Word List Content */}
             <div className="divide-y divide-gray-200">
               {words.map((word) => (
                 <div key={word.id}>
@@ -387,6 +436,29 @@ export default function DashboardPage() {
                   </div>
                 </div>
               ))}
+            </div>
+
+            {/* Bottom Pagination Controls */}
+            <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-t border-gray-200">
+              <div className="text-sm text-gray-700">
+                Page {currentPage} of {totalPages}
+              </div>
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => handlePageChange('prev')}
+                  disabled={currentPage === 1}
+                  className={`p-2 rounded-full ${currentPage === 1 ? 'text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:bg-gray-100'}`}
+                >
+                  <ChevronLeftIcon className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={() => handlePageChange('next')}
+                  disabled={currentPage >= totalPages}
+                  className={`p-2 rounded-full ${currentPage >= totalPages ? 'text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:bg-gray-100'}`}
+                >
+                  <ChevronRightIcon className="h-5 w-5" />
+                </button>
+              </div>
             </div>
           </div>
         </div>
