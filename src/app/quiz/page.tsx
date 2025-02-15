@@ -43,7 +43,6 @@ export default function QuizPage() {
   const [error, setError] = useState<string | null>(null)
   const [history, setHistory] = useState<LogEntry[]>([])
   const [hasLogged, setHasLogged] = useState(false)
-  const { signOut } = useAuth()
 
   // Function to get a random sentence from example_sentence
   const getRandomSentence = useCallback((sentences: string) => {

@@ -5,7 +5,6 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Header from '../components/Header'
-import Link from 'next/link'
 import { ChevronDownIcon, ChevronUpIcon, ChevronLeftIcon, ChevronRightIcon } from '@radix-ui/react-icons'
 
 // Define the Word type
@@ -52,7 +51,6 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null)
   const [expandedWords, setExpandedWords] = useState<number[]>([])
   const [currentDate, setCurrentDate] = useState(new Date())
-  const { signOut } = useAuth()
 
   useEffect(() => {
     const fetchData = async () => {
