@@ -2,7 +2,7 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { useState, useEffect, useCallback } from 'react'
-import { useAuth } from '../../contexts/AuthContext'
+// import { useAuth } from '../../contexts/AuthContext'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Header from '../../components/Header'
 

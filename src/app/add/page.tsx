@@ -58,7 +58,7 @@ export default function AddPage() {
 
       const prompt = `Generate information for the word "${word}" with the following requirements:
       - Part of speech (noun, verb, adjective, etc.)
-      - Clear and concise definition
+      - Clear and concise definition without using the word in the definition.
       - Three example sentences using the word. Use "____" to indicate the word in the sentence.
       - Difficulty level (A1, A2, B1, B2, C1, C2)
       
