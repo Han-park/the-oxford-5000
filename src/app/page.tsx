@@ -140,7 +140,7 @@ export default function DashboardPage() {
     }
 
     void fetchData()
-  }, [currentPage])
+  }, [currentPage, currentDate, wordsPerPage])
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
