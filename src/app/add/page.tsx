@@ -118,14 +118,13 @@ export default function AddPage() {
     try {
       setLoading(true)
       
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('words-v1')
         .insert([{
           ...generatedData,
           source: 'custom',
           score: 5
         }])
-        .select()
 
       if (error) {
         console.error('Supabase insertion error:', error)

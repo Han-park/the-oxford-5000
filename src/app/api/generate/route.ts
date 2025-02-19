@@ -53,8 +53,8 @@ export async function POST(req: NextRequest) {
       }
 
       return NextResponse.json(parsedData)
-    } catch (parseError) {
-      console.error('JSON Parse Error:', content)
+    } catch (error) {
+      console.error('JSON Parse Error:', content, error)
       return NextResponse.json({ error: 'Failed to parse AI response' }, { status: 500 })
     }
   } catch (error) {
