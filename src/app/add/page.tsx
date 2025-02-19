@@ -4,19 +4,12 @@ import { createClient } from '@supabase/supabase-js'
 import { useState } from 'react'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Header from '../../components/Header'
-import OpenAI from 'openai'
 
 // Initialize Supabase client
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
-
-// Initialize OpenAI client
-const openai = new OpenAI({
-  apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
-  dangerouslyAllowBrowser: true // Note: In production, you should use API routes
-})
 
 interface WordData {
   name: string
@@ -56,51 +49,25 @@ export default function AddPage() {
       setLoading(true)
       setError(null)
 
-      const prompt = `Generate information for the word "${word}" with the following requirements:
-      - Part of speech (noun, verb, adjective, etc.)
-      - Clear and concise definition without using the word in the definition.
-      - Three example sentences using the word. Use "____" to indicate the word in the sentence.
-      - Difficulty level (A1, A2, B1, B2, C1, C2)
-      
-      Respond ONLY with a JSON object in this exact format, with no additional text or markdown:
-      {
-        "speech": "your_response",
-        "meaning": "your_response",
-        "example_sentence": "First sentence. Second sentence. Third sentence.",
-        "level": "your_response"
-      }`
-
-      const completion = await openai.chat.completions.create({
-        messages: [{ 
-          role: "user" as const,
-          content: prompt 
-        }],
-        model: "gpt-4o-mini",
-        temperature: 0.7,
-        max_tokens: 500,
-        response_format: { type: "json_object" } // Add this to ensure JSON response
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ word }),
       })
 
-      const content = completion.choices[0].message.content
-      if (!content) throw new Error('No content generated')
-
-      try {
-        const parsedData = JSON.parse(content.trim())
-        
-        // Validate the response structure
-        if (!parsedData.speech || !parsedData.meaning || !parsedData.example_sentence || !parsedData.level) {
-          throw new Error('Invalid response format from AI')
-        }
-
-        setGeneratedData({
-          name: word,
-          ...parsedData,
-          source: 'custom'
-        })
-      } catch {
-        console.error('JSON Parse Error:', content)
-        throw new Error('Failed to parse AI response')
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to generate word data')
       }
+
+      const data = await response.json()
+      setGeneratedData({
+        name: word,
+        ...data,
+        source: 'custom'
+      })
     } catch (err) {
       console.error('Error:', err)
       setError(err instanceof Error ? err.message : 'An error occurred')
@@ -151,17 +118,6 @@ export default function AddPage() {
     try {
       setLoading(true)
       
-      // Log the data before insertion
-      console.log('Attempting to insert data:', {
-        name: generatedData.name,
-        speech: generatedData.speech,
-        meaning: generatedData.meaning,
-        example_sentence: generatedData.example_sentence,
-        level: generatedData.level,
-        source: generatedData.source,
-        score: 5
-      })
-
       const { data, error } = await supabase
         .from('words-v1')
         .insert([{
@@ -175,9 +131,6 @@ export default function AddPage() {
         console.error('Supabase insertion error:', error)
         throw error
       }
-
-      // Log successful insertion
-      console.log('Successfully inserted data:', data)
 
       // Reset form
       setWord('')
