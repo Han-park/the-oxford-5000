@@ -271,7 +271,7 @@ export default function DashboardPage() {
             const dateStr = date.toISOString().split('T')[0]
             const stats = calendarData[dateStr] || { correct: 0, wrong: 0, added: 0 }
             const hasActivity = stats.correct > 0 || stats.wrong > 0 || stats.added > 0
-            const isHighAchievement = stats.correct > 19
+            const isHighAchievement = stats.correct > 9
 
             return (
               <div
