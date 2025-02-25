@@ -49,6 +49,8 @@ export default function AddPage() {
       setLoading(true)
       setError(null)
 
+      console.log(`Sending request to /api/generate for word: ${word}`)
+      
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers: {
@@ -58,19 +60,25 @@ export default function AddPage() {
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to generate word data')
+        const errorData = await response.json().catch(() => ({ error: 'Failed to parse error response' }))
+        console.error('API error response:', response.status, errorData)
+        throw new Error(errorData.error || `Server error: ${response.status}`)
       }
 
-      const data = await response.json()
+      const data = await response.json().catch(() => {
+        throw new Error('Failed to parse API response')
+      })
+      
+      console.log('Successfully received data from API')
+      
       setGeneratedData({
         name: word,
         ...data,
         source: 'custom'
       })
     } catch (err) {
-      console.error('Error:', err)
-      setError(err instanceof Error ? err.message : 'An error occurred')
+      console.error('Error in generateWordData:', err)
+      setError(err instanceof Error ? err.message : 'An error occurred while generating word data')
     } finally {
       setLoading(false)
     }
