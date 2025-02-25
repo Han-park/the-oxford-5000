@@ -3,7 +3,7 @@ import OpenAI from 'openai'
 
 // Initialize OpenAI client
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY // Note: Use server-side environment variable
+  apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY // Note: Use server-side environment variable
 })
 
 export async function POST(req: NextRequest) {
@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     console.log('API route called with request:', req.url)
     
     // Check if API key is available
-    if (!process.env.OPENAI_API_KEY) {
+    if (!process.env.NEXT_PUBLIC_OPENAI_API_KEY) {
       console.error('OPENAI_API_KEY is not set in environment variables')
       return NextResponse.json({ error: 'API key configuration error' }, { status: 500 })
     }
