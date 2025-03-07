@@ -102,7 +102,7 @@ export default function QuizPage() {
       const today = new Date().toISOString().split('T')[0]
       
       // Query logs for today with result = 1 (correct)
-      const { data, error, count } = await supabase
+      const { error, count } = await supabase
         .from('log')
         .select('*', { count: 'exact' })
         .eq('result', 1)
@@ -362,7 +362,7 @@ export default function QuizPage() {
 
       setTodayLogs(Object.values(wordResults))
     } catch (error) {
-      console.error('Error fetching today\'s logs:', error)
+      console.error("Error fetching today's logs:", error)
     } finally {
       setLoading(false)
     }
@@ -432,14 +432,14 @@ export default function QuizPage() {
             </div>
             {dailyCorrectCount >= dailyGoal && (
               <p className="text-green-600 font-medium mt-2">
-                🎉 Congratulations! You've reached your daily goal!
+                🎉 Congratulations! You{"'"}ve reached your daily goal!
               </p>
             )}
           </div>
 
           {showReview ? (
             <div className="bg-white p-6 rounded-lg shadow-md">
-              <h2 className="text-2xl font-bold mb-4 text-black">Today's Review</h2>
+              <h2 className="text-2xl font-bold mb-4 text-black">Today{"'"}s Review</h2>
               
               {todayLogs.length > 0 ? (
                 <div className="space-y-4">
@@ -469,7 +469,7 @@ export default function QuizPage() {
                           {formatDate(log.created_at)}
                         </span>
                         <span className="text-blue-600">
-                          {log.attempts} {log.attempts === 1 ? 'attempt' : 'attempts'} today
+                          {log.attempts} {log.attempts === 1 ? "attempt" : "attempts"} today
                         </span>
                       </div>
                     </div>
