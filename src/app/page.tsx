@@ -16,7 +16,7 @@ interface Word {
   example_sentence: string
   created_at: string
   source: string
-  score?: number
+  user_score?: number
 }
 
 interface QuizResult {
@@ -57,15 +57,68 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const fetchData = async () => {
+      if (!user?.id) return;
+      
       try {
         // Fetch total word count with the policy filter
         const { count, error: countError } = await supabase
           .from('words-v1')
           .select('*', { count: 'exact', head: true })
-          .or(`source.eq.oxford,and(source.eq.custom,UID.eq.${user?.id})`)
+          .or(`source.eq.oxford,and(source.eq.custom,UID.eq.${user.id})`)
 
         if (countError) throw countError
         setTotalWords(count || 0)
+
+        // Check if user has any scores in user_word_scores table
+        const { count: scoreCount, error: scoreCountError } = await supabase
+          .from('user_word_scores')
+          .select('*', { count: 'exact', head: true })
+          .eq('UID', user.id)
+        
+        if (scoreCountError) {
+          console.error('Error checking user scores:', scoreCountError)
+        }
+        
+        // If user has no scores, initialize them
+        if (!scoreCountError && (scoreCount === 0 || scoreCount === null)) {
+          console.log('Initializing user word scores...')
+          
+          // Get all words
+          const { data: allWords, error: allWordsError } = await supabase
+            .from('words-v1')
+            .select('id')
+            .or(`source.eq.oxford,and(source.eq.custom,UID.eq.${user.id})`)
+          
+          if (!allWordsError && allWords && allWords.length > 0) {
+            // Create records to upsert
+            const wordIds = allWords.map(word => word.id)
+            const records = wordIds.map(wordId => ({
+              UID: user.id,
+              word_id: wordId,
+              score: 1, // Default score
+              updated_at: new Date().toISOString()
+            }))
+            
+            // Batch upsert in chunks of 100 to avoid request size limits
+            const chunkSize = 100
+            for (let i = 0; i < records.length; i += chunkSize) {
+              const chunk = records.slice(i, i + chunkSize)
+              
+              const { error: upsertError } = await supabase
+                .from('user_word_scores')
+                .upsert(chunk, {
+                  onConflict: 'UID,word_id'
+                })
+              
+              if (upsertError) {
+                console.error('Error initializing user word scores:', upsertError)
+                break
+              }
+            }
+            
+            console.log('User word scores initialized successfully')
+          }
+        }
 
         // Fetch paginated words with the policy filter
         const from = (currentPage - 1) * wordsPerPage
@@ -74,19 +127,55 @@ export default function DashboardPage() {
         const { data: wordsData, error: wordsError } = await supabase
           .from('words-v1')
           .select('*')
-          .or(`source.eq.oxford,and(source.eq.custom,UID.eq.${user?.id})`)
-          .order('score', { ascending: false, nullsFirst: false })
+          .or(`source.eq.oxford,and(source.eq.custom,UID.eq.${user.id})`)
           .order('created_at', { ascending: false })
           .range(from, to)
 
         if (wordsError) throw wordsError
-        setWords(wordsData || [])
+        
+        // Get user-specific scores for these words
+        const wordIds = wordsData?.map(word => word.id) || []
+        
+        const { data: userScoresData, error: userScoresError } = await supabase
+          .from('user_word_scores')
+          .select('word_id, score')
+          .eq('UID', user.id)
+          .in('word_id', wordIds)
+        
+        if (userScoresError) {
+          console.error('Error fetching user scores:', userScoresError)
+          // Continue without user scores if there's an error
+        }
+        
+        // Create a map of word_id to score for quick lookup
+        const userScoresMap: Record<number, number> = {}
+        userScoresData?.forEach(score => {
+          userScoresMap[score.word_id] = score.score
+        })
+        
+        // Combine the words with their user-specific scores
+        const wordsWithScores = wordsData?.map(word => ({
+          ...word,
+          user_score: userScoresMap[word.id] || 1 // Use user score if available, default to 1
+        })) || []
+        
+        // Sort by user_score (descending)
+        wordsWithScores.sort((a, b) => (b.user_score || 1) - (a.user_score || 1))
+        
+        setWords(wordsWithScores)
 
-        // Fetch quiz results
-        const { data: logData, error: logError } = await supabase
+        // Fetch quiz results - filter by user ID if available
+        const logQuery = supabase
           .from('log')
           .select('*')
-          .order('created_at', { ascending: true })
+          .order('created_at', { ascending: true });
+          
+        // Add user filter if user ID is available
+        if (user?.id) {
+          logQuery.eq('UID', user.id);
+        }
+        
+        const { data: logData, error: logError } = await logQuery;
 
         if (logError) throw logError
 
@@ -350,7 +439,7 @@ export default function DashboardPage() {
       {/* Header */}
       <Header />
 
-      {/* Calendar */}
+     
       <div className="max-w-7xl mx-auto mb-8 bg-white rounded-lg shadow-md p-6">
         {renderCalendar()}
       </div>
@@ -430,7 +519,7 @@ export default function DashboardPage() {
                           <span className="ml-4">Source: {word.source}</span>
                         </div>
                         <div className="text-blue-600 font-medium">
-                          Score: {word.score || 1}
+                          Score: {word.user_score || 1}
                         </div>
                       </div>
                     </div>
@@ -467,3 +556,4 @@ export default function DashboardPage() {
     </div>
   )
 }
+ {/* Calendar */}

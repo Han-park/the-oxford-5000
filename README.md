@@ -20,6 +20,34 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Setting Up User-Specific Word Scores
+
+This application uses a `user_word_scores` table to store user-specific scores for words. To set up this table:
+
+### Option 1: Using the API (Recommended)
+
+1. Start the development server
+2. Visit `/api/create-user-word-scores-table` in your browser
+3. If successful, you'll see a JSON response confirming the table was created
+
+### Option 2: Using the Migration Script
+
+1. Make sure your `.env.local` file contains the Supabase credentials
+2. Run the migration script:
+
+```bash
+node scripts/run-user-word-scores-migration.js
+```
+
+### Option 3: Manual Setup
+
+If the above methods don't work, you can manually set up the table:
+
+1. Log in to your Supabase dashboard
+2. Go to the SQL Editor
+3. Copy and paste the contents of `src/supabase/manual_setup.sql`
+4. Run the SQL script
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

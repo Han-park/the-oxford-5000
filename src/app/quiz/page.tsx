@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import Header from '../../components/Header'
+import { getUserWordScore, updateUserWordScore } from '../../utils/userWordScores'
 
 // Define the Word type
 interface Word {
@@ -13,7 +14,8 @@ interface Word {
   meaning: string
   level: string
   example_sentence: string
-  score: number
+  score?: number // Keep this for backward compatibility
+  user_score?: number // Add this for user-specific scores
 }
 
 // Add this to your existing interfaces
@@ -81,19 +83,26 @@ export default function QuizPage() {
   // Fetch history for a word
   const fetchHistory = useCallback(async (wordId: number) => {
     try {
-      const { data, error } = await supabase
+      const query = supabase
         .from('log')
         .select('*')
         .eq('words_id', wordId)
         .order('created_at', { ascending: false })
         .limit(10)
+        
+      // Add user filter if user ID is available
+      if (user?.id) {
+        query.eq('UID', user.id)
+      }
+      
+      const { data, error } = await query
 
       if (error) throw error
       setHistory(data || [])
     } catch (error) {
       console.error('Error fetching history:', error)
     }
-  }, [])
+  }, [user?.id])
 
   // Fetch daily correct count
   const fetchDailyCorrectCount = useCallback(async () => {
@@ -102,28 +111,37 @@ export default function QuizPage() {
       const today = new Date().toISOString().split('T')[0]
       
       // Query logs for today with result = 1 (correct)
-      const { error, count } = await supabase
+      const query = supabase
         .from('log')
         .select('*', { count: 'exact' })
         .eq('result', 1)
         .gte('created_at', `${today}T00:00:00`)
         .lte('created_at', `${today}T23:59:59`)
+        
+      // Add user filter if user ID is available
+      if (user?.id) {
+        query.eq('UID', user.id)
+      }
+      
+      const { error, count } = await query
 
       if (error) throw error
       setDailyCorrectCount(count || 0)
     } catch (error) {
       console.error('Error fetching daily correct count:', error)
     }
-  }, [])
+  }, [user?.id])
 
   // Fetch a random word from Supabase with weighted probability based on score
   const fetchRandomWord = useCallback(async () => {
     try {
+      if (!user?.id) return;
+      
       // Only fetch words that are either from Oxford or added by the current user
       const { data, error } = await supabase
         .from('words-v1')
         .select('*')
-        .or(`source.eq.oxford,and(source.eq.custom,UID.eq.${user?.id})`)
+        .or(`source.eq.oxford,and(source.eq.custom,UID.eq.${user.id})`)
 
       if (error) {
         console.error('Error fetching words:', error)
@@ -137,16 +155,75 @@ export default function QuizPage() {
         return
       }
 
+      // Get word IDs
+      const wordIds = data.map(word => word.id)
+      
+      // Get user-specific scores for these words
+      const { data: userScoresData, error: userScoresError } = await supabase
+        .from('user_word_scores')
+        .select('word_id, score')
+        .eq('UID', user.id)
+        .in('word_id', wordIds)
+      
+      // Check if we need to initialize scores for any words
+      if (!userScoresError && userScoresData) {
+        const scoredWordIds = userScoresData.map(score => score.word_id)
+        const uninitialized = wordIds.filter(id => !scoredWordIds.includes(id))
+        
+        if (uninitialized.length > 0) {
+          console.log(`Initializing scores for ${uninitialized.length} words...`)
+          
+          // Create records to upsert
+          const records = uninitialized.map(wordId => ({
+            UID: user.id,
+            word_id: wordId,
+            score: 1, // Default score
+            updated_at: new Date().toISOString()
+          }))
+          
+          // Batch upsert in chunks of 100 to avoid request size limits
+          const chunkSize = 100
+          for (let i = 0; i < records.length; i += chunkSize) {
+            const chunk = records.slice(i, i + chunkSize)
+            
+            const { error: upsertError } = await supabase
+              .from('user_word_scores')
+              .upsert(chunk, {
+                onConflict: 'UID,word_id'
+              })
+            
+            if (upsertError) {
+              console.error('Error initializing user word scores:', upsertError)
+              break
+            }
+          }
+        }
+      }
+      
+      // Create a map of word_id to score for quick lookup
+      const userScoresMap: Record<number, number> = {}
+      if (!userScoresError && userScoresData) {
+        userScoresData.forEach(score => {
+          userScoresMap[score.word_id] = score.score
+        })
+      }
+      
+      // Combine the words with their user-specific scores
+      const wordsWithScores = data.map(word => ({
+        ...word,
+        user_score: userScoresMap[word.id] || 1 // Use user score if available, default to 1
+      }))
+
       // Calculate total score for weighted probability
-      const totalScore = data.reduce((sum, word) => sum + (word.score || 1), 0)
+      const totalScore = wordsWithScores.reduce((sum, word) => sum + (word.user_score || 1), 0)
       
       // Generate a random number between 0 and totalScore
       let random = Math.random() * totalScore
-      let selectedWord = data[0]
+      let selectedWord = wordsWithScores[0]
       
       // Select a word based on weighted probability
-      for (const word of data) {
-        random -= (word.score || 1)
+      for (const word of wordsWithScores) {
+        random -= (word.user_score || 1)
         if (random <= 0) {
           selectedWord = word
           break
@@ -180,16 +257,24 @@ export default function QuizPage() {
     }
   }, [getRandomSentence, fetchHistory, user?.id])
 
-  const updateWordScore = async (wordId: number, currentScore: number, isCorrect: boolean) => {
-    const newScore = isCorrect ? currentScore * 2 : currentScore * 3
+  const updateWordScore = async (wordId: number, isCorrect: boolean) => {
+    if (!user?.id || !wordId) return;
     
-    const { error } = await supabase
-      .from('words-v1')
-      .update({ score: newScore })
-      .eq('id', wordId)
-
-    if (error) {
-      console.error('Error updating word score:', error)
+    try {
+      // Update user-specific score
+      await updateUserWordScore(user.id, wordId, isCorrect ? 1 : 0);
+      
+      // Update the current word's score in state
+      if (currentWord && currentWord.id === wordId) {
+        const currentScore = currentWord.user_score || 1;
+        const newScore = isCorrect ? currentScore + 1 : Math.max(1, currentScore - 1);
+        setCurrentWord({
+          ...currentWord,
+          user_score: newScore
+        });
+      }
+    } catch (error) {
+      console.error('Error updating word score:', error);
     }
   }
 
@@ -201,13 +286,14 @@ export default function QuizPage() {
     // Only log the result if we haven't logged for this word yet
     if (!hasLogged && currentWord) {
       // Update the word's score
-      await updateWordScore(currentWord.id, currentWord.score || 1, correct)
+      await updateWordScore(currentWord.id, correct)
 
       const { error } = await supabase
         .from('log')
         .insert({
           words_id: currentWord.id,
-          result: correct ? 1 : 0
+          result: correct ? 1 : 0,
+          UID: user?.id
         })
 
       if (error) {
@@ -265,13 +351,14 @@ export default function QuizPage() {
     // Log the skipped word as incorrect and update score
     if (!hasLogged && currentWord) {
       // Update the word's score (treat skip as incorrect)
-      await updateWordScore(currentWord.id, currentWord.score || 1, false)
+      await updateWordScore(currentWord.id, false)
 
       const { error } = await supabase
         .from('log')
         .insert({
           words_id: currentWord.id,
-          result: 0  // Mark as incorrect
+          result: 0,  // Mark as incorrect
+          UID: user?.id
         })
 
       if (error) {
@@ -305,13 +392,20 @@ export default function QuizPage() {
       // Get today's date in ISO format (YYYY-MM-DD)
       const today = new Date().toISOString().split('T')[0]
       
-      // Query logs for today
-      const { data: logData, error: logError } = await supabase
+      // Query logs for today - filter by user ID if available
+      const logQuery = supabase
         .from('log')
         .select('*')
         .gte('created_at', `${today}T00:00:00`)
         .lte('created_at', `${today}T23:59:59`)
-        .order('created_at', { ascending: false })
+        .order('created_at', { ascending: false });
+        
+      // Add user filter if user ID is available
+      if (user?.id) {
+        logQuery.eq('UID', user.id);
+      }
+      
+      const { data: logData, error: logError } = await logQuery;
 
       if (logError) throw logError
 
@@ -368,7 +462,7 @@ export default function QuizPage() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [user?.id])
 
   // Modify the useEffect to include fetchTodayLogs when showing review
   useEffect(() => {

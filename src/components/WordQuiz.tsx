@@ -1,7 +1,7 @@
 'use client'
 
 import { createClient } from '@supabase/supabase-js'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 
 // Define the Word type
@@ -12,6 +12,7 @@ interface Word {
   meaning: string
   level: string
   example_sentence: string
+  user_score?: number
 }
 
 // Add this to your existing interfaces
@@ -29,7 +30,7 @@ const supabase = createClient(
 )
 
 export default function WordQuiz() {
-  const { signOut } = useAuth()
+  const { signOut, user } = useAuth()
   const [currentWord, setCurrentWord] = useState<Word | null>(null)
   const [userInput, setUserInput] = useState('')
   const [showResult, setShowResult] = useState(false)
@@ -67,9 +68,13 @@ export default function WordQuiz() {
   // Fetch a random word from Supabase
   const fetchRandomWord = async () => {
     try {
+      if (!user?.id) return;
+      
+      // Only fetch words that are either from Oxford or added by the current user
       const { data, error } = await supabase
         .from('words-v1')
         .select('*')
+        .or(`source.eq.oxford,and(source.eq.custom,UID.eq.${user.id})`)
 
       if (error) {
         console.error('Error fetching words:', error)
@@ -83,19 +88,100 @@ export default function WordQuiz() {
         return
       }
 
-      const randomIndex = Math.floor(Math.random() * data.length)
-      const randomWord = data[randomIndex]
+      // Get user-specific scores for these words
+      const wordIds = data.map(word => word.id)
+      
+      let { data: userScoresData, error: userScoresError } = await supabase
+        .from('user_word_scores')
+        .select('word_id, score')
+        .eq('UID', user.id)
+        .in('word_id', wordIds)
+      
+      // Check if we need to initialize scores for any words
+      if (!userScoresError && userScoresData) {
+        const scoredWordIds = userScoresData.map(score => score.word_id)
+        const uninitialized = wordIds.filter(id => !scoredWordIds.includes(id))
+        
+        if (uninitialized.length > 0) {
+          console.log(`Initializing scores for ${uninitialized.length} words...`)
+          
+          // Create records to upsert
+          const records = uninitialized.map(wordId => ({
+            UID: user.id,
+            word_id: wordId,
+            score: 1, // Default score
+            updated_at: new Date().toISOString()
+          }))
+          
+          // Batch upsert in chunks of 100 to avoid request size limits
+          const chunkSize = 100
+          for (let i = 0; i < records.length; i += chunkSize) {
+            const chunk = records.slice(i, i + chunkSize)
+            
+            const { error: upsertError } = await supabase
+              .from('user_word_scores')
+              .upsert(chunk, {
+                onConflict: 'UID,word_id'
+              })
+            
+            if (upsertError) {
+              console.error('Error initializing user word scores:', upsertError)
+              break
+            }
+          }
+          
+          // Refresh user scores data after initialization
+          const refreshResult = await supabase
+            .from('user_word_scores')
+            .select('word_id, score')
+            .eq('UID', user.id)
+            .in('word_id', wordIds)
+            
+          if (!refreshResult.error && refreshResult.data) {
+            userScoresData = refreshResult.data
+          }
+        }
+      }
+      
+      // Create a map of word_id to score for quick lookup
+      const userScoresMap: Record<number, number> = {}
+      if (!userScoresError && userScoresData) {
+        userScoresData.forEach(score => {
+          userScoresMap[score.word_id] = score.score
+        })
+      }
+      
+      // Combine the words with their user-specific scores
+      const wordsWithScores = data.map(word => ({
+        ...word,
+        user_score: userScoresMap[word.id] || 1 // Use user score if available, default to 1
+      }))
 
-      setCurrentWord(randomWord)
-      setRandomSentence(getRandomSentence(randomWord.example_sentence))
+      // Calculate total score for weighted probability
+      const totalScore = wordsWithScores.reduce((sum, word) => sum + (word.user_score || 1), 0)
+      
+      // Generate a random number between 0 and totalScore
+      let random = Math.random() * totalScore
+      let selectedWord = wordsWithScores[0]
+      
+      // Select a word based on weighted probability
+      for (const word of wordsWithScores) {
+        random -= (word.user_score || 1)
+        if (random <= 0) {
+          selectedWord = word
+          break
+        }
+      }
+
+      setCurrentWord(selectedWord)
+      setRandomSentence(getRandomSentence(selectedWord.example_sentence))
       setUserInput('')
       setShowResult(false)
       setShowAnswer(false)
       setRevealedHints([])
       
       // Fetch history for the new word
-      const wordId = randomWord.id;
-      await fetchHistory(wordId)
+      await fetchHistory(selectedWord.id)
     } catch (error) {
       console.error('Error:', error)
       if (error instanceof Error) {
@@ -129,12 +215,40 @@ export default function WordQuiz() {
     setShowResult(true)
 
     // Log the result to Supabase
-    if (currentWord) {
+    if (currentWord && user?.id) {
+      // Update user-specific score
+      const currentScore = currentWord.user_score || 1;
+      const newScore = correct ? currentScore + 1 : Math.max(1, currentScore - 1);
+      
+      // Update the score in user_word_scores table
+      const { error: scoreError } = await supabase
+        .from('user_word_scores')
+        .upsert({
+          UID: user.id,
+          word_id: currentWord.id,
+          score: newScore,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'UID,word_id'
+        });
+        
+      if (scoreError) {
+        console.error('Error updating score:', scoreError);
+      } else {
+        // Update the current word's score in state
+        setCurrentWord({
+          ...currentWord,
+          user_score: newScore
+        });
+      }
+
+      // Log the result
       const { error } = await supabase
         .from('log')
         .insert({
           words_id: currentWord.id,
-          result: correct ? 1 : 0
+          result: correct ? 1 : 0,
+          UID: user.id
         })
 
       if (error) {

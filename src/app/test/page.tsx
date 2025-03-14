@@ -16,6 +16,7 @@ export default function TestPage() {
   const [error, setError] = useState<string | null>(null)
   const [creatingTable, setCreatingTable] = useState(false)
   const [runningMigration, setRunningMigration] = useState(false)
+  const [runningLogMigration, setRunningLogMigration] = useState(false)
 
   const checkDatabase = async () => {
     try {
@@ -184,6 +185,26 @@ export default function TestPage() {
     }
   }
 
+  const runLogTableMigration = async () => {
+    setRunningLogMigration(true)
+    setError(null)
+    
+    try {
+      const response = await fetch('/api/migrate-log-table')
+      const result = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to run log table migration')
+      }
+      
+      alert('Log table migration completed successfully!')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error')
+    } finally {
+      setRunningLogMigration(false)
+    }
+  }
+
   return (
     <div className="min-h-screen p-8">
       <h1 className="text-3xl font-bold mb-6">Authentication Test Page</h1>
@@ -244,6 +265,19 @@ export default function TestPage() {
               className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-blue-300"
             >
               {runningMigration ? 'Running Migration...' : 'Run Migration'}
+            </button>
+          </div>
+
+          <div className="mt-4">
+            <h3 className="text-lg font-semibold">User-specific Calendar</h3>
+            <p className="text-gray-600">Add UID column to log table to make calendar user-specific</p>
+            
+            <button
+              onClick={runLogTableMigration}
+              disabled={runningLogMigration}
+              className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-blue-300"
+            >
+              {runningLogMigration ? 'Running Migration...' : 'Run Log Table Migration'}
             </button>
           </div>
         </div>
