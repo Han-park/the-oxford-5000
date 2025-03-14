@@ -2,7 +2,7 @@
 
 import { useAuth } from '../contexts/AuthContext'
 import { useRouter, usePathname } from 'next/navigation'
-import { useEffect } from 'react'
+import { useEffect, useCallback } from 'react'
 
 // List of public routes that don't require authentication
 const publicRoutes = ['/signin', '/signup', '/reset-password', '/test']
@@ -16,12 +16,12 @@ export default function AuthCheck({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
 
   // Check if the current path is a protected route or starts with a protected route
-  const isProtectedRoute = () => {
+  const isProtectedRoute = useCallback(() => {
     return protectedRoutes.some(route => 
       pathname === route || 
       (route !== '/' && pathname.startsWith(route + '/'))
     )
-  }
+  }, [pathname])
 
   useEffect(() => {
     // Skip the check if we're still loading or if we're on a public route
@@ -34,7 +34,7 @@ export default function AuthCheck({ children }: { children: React.ReactNode }) {
       console.log('User not authenticated, redirecting to signin page from:', pathname)
       router.push('/signin')
     }
-  }, [user, loading, router, pathname])
+  }, [user, loading, router, pathname, isProtectedRoute])
 
   // For debugging
   useEffect(() => {
@@ -45,7 +45,7 @@ export default function AuthCheck({ children }: { children: React.ReactNode }) {
       isPublicRoute: publicRoutes.includes(pathname),
       isProtectedRoute: isProtectedRoute()
     })
-  }, [user, loading, pathname])
+  }, [user, loading, pathname, isProtectedRoute])
 
   // If we're on a public route, or the user is authenticated, render the children
   if (publicRoutes.includes(pathname) || user) {

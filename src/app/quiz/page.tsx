@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import Header from '../../components/Header'
-import { getUserWordScore, updateUserWordScore } from '../../utils/userWordScores'
+import { updateUserWordScore } from '../../utils/userWordScores'
 
 // Define the Word type
 interface Word {

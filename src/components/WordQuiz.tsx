@@ -1,7 +1,7 @@
 'use client'
 
 import { createClient } from '@supabase/supabase-js'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 
 // Define the Word type
@@ -91,11 +91,14 @@ export default function WordQuiz() {
       // Get user-specific scores for these words
       const wordIds = data.map(word => word.id)
       
-      let { data: userScoresData, error: userScoresError } = await supabase
+      const result = await supabase
         .from('user_word_scores')
         .select('word_id, score')
         .eq('UID', user.id)
         .in('word_id', wordIds)
+      
+      const userScoresError = result.error
+      let userScoresData = result.data
       
       // Check if we need to initialize scores for any words
       if (!userScoresError && userScoresData) {
