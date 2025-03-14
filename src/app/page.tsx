@@ -2,7 +2,7 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { useState, useEffect } from 'react'
-// import { useAuth } from '../contexts/AuthContext'
+import { useAuth } from '../contexts/AuthContext'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Header from '../components/Header'
 import { ChevronDownIcon, ChevronUpIcon, ChevronLeftIcon, ChevronRightIcon } from '@radix-ui/react-icons'
@@ -54,25 +54,29 @@ export default function DashboardPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [totalWords, setTotalWords] = useState(0)
   const wordsPerPage = 50
+  const { user } = useAuth()
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch total word count
+        // Fetch total word count with the policy filter
         const { count, error: countError } = await supabase
           .from('words-v1')
           .select('*', { count: 'exact', head: true })
+          .or(`source.eq.oxford,and(source.eq.custom,UID.eq.${user?.id})`)
 
         if (countError) throw countError
         setTotalWords(count || 0)
 
-        // Fetch paginated words
+        // Fetch paginated words with the policy filter
         const from = (currentPage - 1) * wordsPerPage
         const to = from + wordsPerPage - 1
 
         const { data: wordsData, error: wordsError } = await supabase
           .from('words-v1')
           .select('*')
+          .or(`source.eq.oxford,and(source.eq.custom,UID.eq.${user?.id})`)
+          .order('score', { ascending: false, nullsFirst: false })
           .order('created_at', { ascending: false })
           .range(from, to)
 
@@ -140,7 +144,7 @@ export default function DashboardPage() {
     }
 
     void fetchData()
-  }, [currentPage, currentDate, wordsPerPage])
+  }, [currentPage, currentDate, wordsPerPage, user?.id])
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)

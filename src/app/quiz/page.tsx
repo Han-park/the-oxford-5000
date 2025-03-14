@@ -2,7 +2,7 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { useState, useEffect, useCallback, useRef } from 'react'
-// import { useAuth } from '../../contexts/AuthContext'
+import { useAuth } from '../../contexts/AuthContext'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Header from '../../components/Header'
 
@@ -42,6 +42,7 @@ const supabase = createClient(
 )
 
 export default function QuizPage() {
+  const { user } = useAuth()
   const [currentWord, setCurrentWord] = useState<Word | null>(null)
   const [userInput, setUserInput] = useState('')
   const [showResult, setShowResult] = useState(false)
@@ -119,9 +120,11 @@ export default function QuizPage() {
   // Fetch a random word from Supabase with weighted probability based on score
   const fetchRandomWord = useCallback(async () => {
     try {
+      // Only fetch words that are either from Oxford or added by the current user
       const { data, error } = await supabase
         .from('words-v1')
         .select('*')
+        .or(`source.eq.oxford,and(source.eq.custom,UID.eq.${user?.id})`)
 
       if (error) {
         console.error('Error fetching words:', error)
@@ -176,7 +179,7 @@ export default function QuizPage() {
     } finally {
       setLoading(false)
     }
-  }, [getRandomSentence, fetchHistory])
+  }, [getRandomSentence, fetchHistory, user?.id])
 
   const updateWordScore = async (wordId: number, currentScore: number, isCorrect: boolean) => {
     const newScore = isCorrect ? currentScore * 2 : currentScore * 3

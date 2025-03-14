@@ -2,6 +2,7 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { useState } from 'react'
+import { useAuth } from '../../contexts/AuthContext'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Header from '../../components/Header'
 
@@ -20,8 +21,8 @@ interface WordData {
   source: string
 }
 
-// Modify the checkWordExists function to remove spaces
-const checkWordExists = async (word: string) => {
+// Modify the checkWordExists function to check only for the current user's words
+const checkWordExists = async (word: string, userId: string) => {
   // Remove all spaces from the word
   const cleanWord = word.replace(/\s+/g, '')
   
@@ -29,6 +30,8 @@ const checkWordExists = async (word: string) => {
     .from('words-v1')
     .select('name')
     .eq('name', cleanWord)
+    .eq('UID', userId)
+    .eq('source', 'custom')
     .single()
 
   if (error && error.code !== 'PGRST116') { // PGRST116 means no rows returned
@@ -39,6 +42,7 @@ const checkWordExists = async (word: string) => {
 }
 
 export default function AddPage() {
+  const { user } = useAuth()
   const [word, setWord] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -84,10 +88,10 @@ export default function AddPage() {
     }
   }
 
-  // Modify the handleSubmit function to handle spaces properly
+  // Modify the handleSubmit function to pass the user ID
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!word.trim()) return
+    if (!word.trim() || !user) return
 
     try {
       setLoading(true)
@@ -96,15 +100,15 @@ export default function AddPage() {
       // Remove all spaces and convert to lowercase
       const cleanWord = word.trim().toLowerCase().replace(/\s+/g, '')
       
-      // Check if word already exists
-      const exists = await checkWordExists(cleanWord)
+      // Check if word already exists for this user
+      const exists = await checkWordExists(cleanWord, user.id)
       
       if (exists) {
-        setError(`The word "${cleanWord}" already exists in the database.`)
+        setError(`You have already added the word "${cleanWord}" to your collection.`)
         return
       }
 
-      // If word doesn't exist, proceed with generation using the clean word
+      // If word doesn't exist for this user, proceed with generation using the clean word
       await generateWordData(cleanWord)
     } catch (err) {
       console.error('Error checking word existence:', err)
@@ -121,7 +125,7 @@ export default function AddPage() {
   }
 
   const handleAdd = async () => {
-    if (!generatedData) return
+    if (!generatedData || !user) return
 
     try {
       setLoading(true)
@@ -131,7 +135,8 @@ export default function AddPage() {
         .insert([{
           ...generatedData,
           source: 'custom',
-          score: 5
+          score: 5,
+          UID: user.id
         }])
 
       if (error) {
