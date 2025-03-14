@@ -2,7 +2,6 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
 const supabase = createClient(
@@ -17,7 +16,6 @@ export default function SignUp() {
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const router = useRouter()
 
   const validatePassword = (password: string): boolean => {
     return password.length >= 8

@@ -20,7 +20,7 @@ export default function TestPage() {
   const checkDatabase = async () => {
     try {
       // Check if we can connect to Supabase
-      const { data, error } = await supabase.from('words-v1').select('id').limit(1)
+      const { error } = await supabase.from('words-v1').select('id').limit(1)
       
       if (error) {
         setDbStatus(`Error: ${error.message}`)
@@ -29,7 +29,7 @@ export default function TestPage() {
       }
       
       // Check if profiles table exists
-      const { data: profileData, error: profileError } = await supabase.from('profiles').select('id').limit(1)
+      const { error: profileError } = await supabase.from('profiles').select('id').limit(1)
       
       if (profileError) {
         if (profileError.message.includes('does not exist')) {

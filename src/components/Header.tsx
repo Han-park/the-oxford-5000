@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext'
 import Link from 'next/link'
 
 export default function Header() {
-  const { user, profile, signOut } = useAuth()
+  const { profile, signOut } = useAuth()
 
   return (
     <div className="max-w-7xl mx-auto mb-8 flex justify-between items-center">

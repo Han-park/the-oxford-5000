@@ -2,7 +2,6 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import { useAuth } from '../../contexts/AuthContext'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Header from '../../components/Header'
@@ -14,11 +13,9 @@ const supabase = createClient(
 
 export default function ProfilePage() {
   const { user, profile, refreshProfile } = useAuth()
-  const router = useRouter()
   
   // Display name state
   const [displayName, setDisplayName] = useState('')
-  const [loadingProfile, setLoadingProfile] = useState(false)
   const [updatingProfile, setUpdatingProfile] = useState(false)
   const [profileMessage, setProfileMessage] = useState<string | null>(null)
   const [profileError, setProfileError] = useState<string | null>(null)
@@ -199,7 +196,7 @@ export default function ProfilePage() {
                 
                 <button
                   type="submit"
-                  disabled={updatingProfile || loadingProfile}
+                  disabled={updatingProfile}
                   className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors disabled:bg-blue-300"
                 >
                   {updatingProfile ? 'Updating...' : 'Update Profile'}
