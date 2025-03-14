@@ -3,7 +3,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import ProtectedRoute from '../components/ProtectedRoute'
 import Header from '../components/Header'
 import { ChevronDownIcon, ChevronUpIcon, ChevronLeftIcon, ChevronRightIcon } from '@radix-ui/react-icons'
 
@@ -347,126 +346,124 @@ export default function DashboardPage() {
   )
 
   return (
-    <ProtectedRoute>
-      <div className="min-h-screen p-8">
-        {/* Header */}
-        <Header />
+    <div className="min-h-screen p-8">
+      {/* Header */}
+      <Header />
 
-        {/* Calendar */}
-        <div className="max-w-7xl mx-auto mb-8 bg-white rounded-lg shadow-md p-6">
-          {renderCalendar()}
-        </div>
+      {/* Calendar */}
+      <div className="max-w-7xl mx-auto mb-8 bg-white rounded-lg shadow-md p-6">
+        {renderCalendar()}
+      </div>
 
-        {/* Word List */}
-        <div className="max-w-7xl mx-auto">
-          <div className="bg-white shadow-md rounded-lg overflow-hidden">
-            {/* Pagination Controls */}
-            <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-200">
-              <div className="text-sm text-gray-700">
-                Showing words {((currentPage - 1) * wordsPerPage) + 1} to {Math.min(currentPage * wordsPerPage, totalWords)} of {totalWords}
-              </div>
-              <div className="flex space-x-2">
-                <button
-                  onClick={() => handlePageChange('prev')}
-                  disabled={currentPage === 1}
-                  className={`p-2 rounded-full ${currentPage === 1 ? 'text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:bg-gray-100'}`}
-                >
-                  <ChevronLeftIcon className="h-5 w-5" />
-                </button>
-                <button
-                  onClick={() => handlePageChange('next')}
-                  disabled={currentPage >= totalPages}
-                  className={`p-2 rounded-full ${currentPage >= totalPages ? 'text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:bg-gray-100'}`}
-                >
-                  <ChevronRightIcon className="h-5 w-5" />
-                </button>
-              </div>
+      {/* Word List */}
+      <div className="max-w-7xl mx-auto">
+        <div className="bg-white shadow-md rounded-lg overflow-hidden">
+          {/* Pagination Controls */}
+          <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-200">
+            <div className="text-sm text-gray-700">
+              Showing words {((currentPage - 1) * wordsPerPage) + 1} to {Math.min(currentPage * wordsPerPage, totalWords)} of {totalWords}
             </div>
+            <div className="flex space-x-2">
+              <button
+                onClick={() => handlePageChange('prev')}
+                disabled={currentPage === 1}
+                className={`p-2 rounded-full ${currentPage === 1 ? 'text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:bg-gray-100'}`}
+              >
+                <ChevronLeftIcon className="h-5 w-5" />
+              </button>
+              <button
+                onClick={() => handlePageChange('next')}
+                disabled={currentPage >= totalPages}
+                className={`p-2 rounded-full ${currentPage >= totalPages ? 'text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:bg-gray-100'}`}
+              >
+                <ChevronRightIcon className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
 
-            {/* Word List Content */}
-            <div className="divide-y divide-gray-200">
-              {words.map((word) => (
-                <div key={word.id}>
-                  <div 
-                    className="p-4 hover:bg-gray-50 cursor-pointer"
-                    onClick={() => toggleWordExpansion(word.id)}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4 flex-1">
-                        <h3 className="text-lg font-medium text-gray-900 w-32">{word.name}</h3>
-                        <span className="text-sm text-gray-600 w-20">{word.speech}</span>
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full w-16 justify-center
-                          ${word.level === 'C2' ? 'bg-purple-100 text-purple-800' :
-                            word.level === 'C1' ? 'bg-blue-100 text-blue-800' :
-                            word.level === 'B2' ? 'bg-green-100 text-green-800' :
-                            word.level === 'B1' ? 'bg-yellow-100 text-yellow-800' :
-                            word.level === 'A2' ? 'bg-orange-100 text-orange-800' :
-                            'bg-red-100 text-red-800'}`}
-                        >
-                          {word.level}
-                        </span>
-                        <div className="flex-1 ml-4">
-                          {renderQuizResults(word.id)}
-                        </div>
+          {/* Word List Content */}
+          <div className="divide-y divide-gray-200">
+            {words.map((word) => (
+              <div key={word.id}>
+                <div 
+                  className="p-4 hover:bg-gray-50 cursor-pointer"
+                  onClick={() => toggleWordExpansion(word.id)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4 flex-1">
+                      <h3 className="text-lg font-medium text-gray-900 w-32">{word.name}</h3>
+                      <span className="text-sm text-gray-600 w-20">{word.speech}</span>
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full w-16 justify-center
+                        ${word.level === 'C2' ? 'bg-purple-100 text-purple-800' :
+                          word.level === 'C1' ? 'bg-blue-100 text-blue-800' :
+                          word.level === 'B2' ? 'bg-green-100 text-green-800' :
+                          word.level === 'B1' ? 'bg-yellow-100 text-yellow-800' :
+                          word.level === 'A2' ? 'bg-orange-100 text-orange-800' :
+                          'bg-red-100 text-red-800'}`}
+                      >
+                        {word.level}
+                      </span>
+                      <div className="flex-1 ml-4">
+                        {renderQuizResults(word.id)}
                       </div>
-                      {expandedWords.includes(word.id) ? (
-                        <ChevronUpIcon className="h-5 w-5 text-gray-500" />
-                      ) : (
-                        <ChevronDownIcon className="h-5 w-5 text-gray-500" />
-                      )}
                     </div>
-                    
-                    {expandedWords.includes(word.id) && (
-                      <div className="mt-4 pl-32 space-y-2">
-                        <div>
-                          <p className="text-sm text-gray-600">Meaning:</p>
-                          <p className="text-gray-900">{word.meaning}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-600">Example:</p>
-                          <p className="text-gray-900 italic">{word.example_sentence}</p>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <div className="text-gray-500">
-                            <span>Added: {formatDate(word.created_at)}</span>
-                            <span className="ml-4">Source: {word.source}</span>
-                          </div>
-                          <div className="text-blue-600 font-medium">
-                            Score: {word.score || 1}
-                          </div>
-                        </div>
-                      </div>
+                    {expandedWords.includes(word.id) ? (
+                      <ChevronUpIcon className="h-5 w-5 text-gray-500" />
+                    ) : (
+                      <ChevronDownIcon className="h-5 w-5 text-gray-500" />
                     )}
                   </div>
+                  
+                  {expandedWords.includes(word.id) && (
+                    <div className="mt-4 pl-32 space-y-2">
+                      <div>
+                        <p className="text-sm text-gray-600">Meaning:</p>
+                        <p className="text-gray-900">{word.meaning}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Example:</p>
+                        <p className="text-gray-900 italic">{word.example_sentence}</p>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <div className="text-gray-500">
+                          <span>Added: {formatDate(word.created_at)}</span>
+                          <span className="ml-4">Source: {word.source}</span>
+                        </div>
+                        <div className="text-blue-600 font-medium">
+                          Score: {word.score || 1}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
+          </div>
 
-            {/* Bottom Pagination Controls */}
-            <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-t border-gray-200">
-              <div className="text-sm text-gray-700">
-                Page {currentPage} of {totalPages}
-              </div>
-              <div className="flex space-x-2">
-                <button
-                  onClick={() => handlePageChange('prev')}
-                  disabled={currentPage === 1}
-                  className={`p-2 rounded-full ${currentPage === 1 ? 'text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:bg-gray-100'}`}
-                >
-                  <ChevronLeftIcon className="h-5 w-5" />
-                </button>
-                <button
-                  onClick={() => handlePageChange('next')}
-                  disabled={currentPage >= totalPages}
-                  className={`p-2 rounded-full ${currentPage >= totalPages ? 'text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:bg-gray-100'}`}
-                >
-                  <ChevronRightIcon className="h-5 w-5" />
-                </button>
-              </div>
+          {/* Bottom Pagination Controls */}
+          <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-t border-gray-200">
+            <div className="text-sm text-gray-700">
+              Page {currentPage} of {totalPages}
+            </div>
+            <div className="flex space-x-2">
+              <button
+                onClick={() => handlePageChange('prev')}
+                disabled={currentPage === 1}
+                className={`p-2 rounded-full ${currentPage === 1 ? 'text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:bg-gray-100'}`}
+              >
+                <ChevronLeftIcon className="h-5 w-5" />
+              </button>
+              <button
+                onClick={() => handlePageChange('next')}
+                disabled={currentPage >= totalPages}
+                className={`p-2 rounded-full ${currentPage >= totalPages ? 'text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:bg-gray-100'}`}
+              >
+                <ChevronRightIcon className="h-5 w-5" />
+              </button>
             </div>
           </div>
         </div>
       </div>
-    </ProtectedRoute>
+    </div>
   )
 }

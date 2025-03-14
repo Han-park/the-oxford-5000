@@ -3,7 +3,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
-import ProtectedRoute from '../../components/ProtectedRoute'
 import Header from '../../components/Header'
 
 // Initialize Supabase client
@@ -163,86 +162,84 @@ export default function AddPage() {
   }
 
   return (
-    <ProtectedRoute>
-      <div className="min-h-screen p-8">
-        {/* Header */}
-        <Header />
+    <div className="min-h-screen p-8">
+      {/* Header */}
+      <Header />
 
-        <div className="max-w-2xl mx-auto">
-          <div className="space-y-6">
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <h2 className="text-2xl font-bold mb-4 text-black">Add New Word</h2>
-              
-              {/* Word Input Form */}
-              <form onSubmit={handleSubmit} className="mb-8">
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={word}
-                    onChange={handleInputChange}
-                    placeholder="Enter a word (spaces will be ignored)"
-                    className="flex-1 p-2 border rounded text-black"
-                    disabled={loading || !!generatedData}
-                  />
+      <div className="max-w-2xl mx-auto">
+        <div className="space-y-6">
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <h2 className="text-2xl font-bold mb-4 text-black">Add New Word</h2>
+            
+            {/* Word Input Form */}
+            <form onSubmit={handleSubmit} className="mb-8">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={word}
+                  onChange={handleInputChange}
+                  placeholder="Enter a word (spaces will be ignored)"
+                  className="flex-1 p-2 border rounded text-black"
+                  disabled={loading || !!generatedData}
+                />
+                <button
+                  type="submit"
+                  disabled={loading || !word || !!generatedData}
+                  className="px-4 py-2 bg-blue-500 text-white rounded disabled:bg-gray-300"
+                >
+                  {loading ? 'Generating...' : 'Generate'}
+                </button>
+              </div>
+            </form>
+
+            {/* Error Message */}
+            {error && (
+              <div className="mb-4 p-4 bg-red-100 text-red-700 rounded">
+                {error}
+              </div>
+            )}
+
+            {/* Generated Data Preview */}
+            {generatedData && (
+              <div className="space-y-4">
+                <div className="text-black">
+                  <p className="font-semibold">Word: {generatedData.name}</p>
+                  <p>Part of Speech: {generatedData.speech}</p>
+                  <p>Level: {generatedData.level}</p>
+                  <p>Meaning: {generatedData.meaning}</p>
+                  <p>Example Sentences:</p>
+                  <ul className="list-disc pl-5">
+                    {generatedData.example_sentence.split('.').map((sentence, index) => (
+                      sentence.trim() && (
+                        <li key={index} className="mt-1">
+                          {sentence.trim()}.
+                        </li>
+                      )
+                    ))}
+                  </ul>
+                </div>
+                
+                <div className="flex gap-2 mt-6">
                   <button
-                    type="submit"
-                    disabled={loading || !word || !!generatedData}
-                    className="px-4 py-2 bg-blue-500 text-white rounded disabled:bg-gray-300"
+                    onClick={handleAdd}
+                    disabled={loading}
+                    className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-300"
                   >
-                    {loading ? 'Generating...' : 'Generate'}
+                    {loading ? 'Adding...' : 'Add Word'}
+                  </button>
+                  <button
+                    onClick={handleCancel}
+                    disabled={loading}
+                    className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 disabled:bg-gray-300"
+                  >
+                    Cancel
                   </button>
                 </div>
-              </form>
-
-              {/* Error Message */}
-              {error && (
-                <div className="mb-4 p-4 bg-red-100 text-red-700 rounded">
-                  {error}
-                </div>
-              )}
-
-              {/* Generated Data Preview */}
-              {generatedData && (
-                <div className="space-y-4">
-                  <div className="text-black">
-                    <p className="font-semibold">Word: {generatedData.name}</p>
-                    <p>Part of Speech: {generatedData.speech}</p>
-                    <p>Level: {generatedData.level}</p>
-                    <p>Meaning: {generatedData.meaning}</p>
-                    <p>Example Sentences:</p>
-                    <ul className="list-disc pl-5">
-                      {generatedData.example_sentence.split('.').map((sentence, index) => (
-                        sentence.trim() && (
-                          <li key={index} className="mt-1">
-                            {sentence.trim()}.
-                          </li>
-                        )
-                      ))}
-                    </ul>
-                  </div>
-                  
-                  <div className="flex gap-2 mt-6">
-                    <button
-                      onClick={handleAdd}
-                      disabled={loading}
-                      className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-300"
-                    >
-                      {loading ? 'Adding...' : 'Add Word'}
-                    </button>
-                    <button
-                      onClick={handleCancel}
-                      disabled={loading}
-                      className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 disabled:bg-gray-300"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
-    </ProtectedRoute>
+    </div>
   )
 } 

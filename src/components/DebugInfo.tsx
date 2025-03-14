@@ -19,9 +19,9 @@ export default function DebugInfo() {
   }
 
   return (
-    <div className="fixed bottom-20 right-4 bg-white p-4 rounded-lg shadow-lg border border-gray-300 max-w-md z-50">
+    <div className="fixed bottom-20 right-4 bg-white p-4 rounded-lg shadow-lg text-blackborder border-gray-300 max-w-md z-50">
       <div className="flex justify-between items-center mb-2">
-        <h3 className="font-bold">Debug Information</h3>
+        <h3 className="font-bold text-black">Debug Information</h3>
         <button 
           onClick={() => setShowDebug(false)}
           className="text-gray-500 hover:text-gray-700"
@@ -30,7 +30,7 @@ export default function DebugInfo() {
         </button>
       </div>
       
-      <div className="text-xs space-y-2 overflow-auto max-h-60">
+      <div className="text-xs space-y-2 overflow-auto max-h-60 text-black">
         <div>
           <p className="font-semibold">Auth State:</p>
           <p>Loading: {loading ? 'true' : 'false'}</p>

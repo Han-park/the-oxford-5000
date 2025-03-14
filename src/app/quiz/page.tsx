@@ -3,7 +3,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
-import ProtectedRoute from '../../components/ProtectedRoute'
 import Header from '../../components/Header'
 
 // Define the Word type
@@ -407,237 +406,235 @@ export default function QuizPage() {
   if (error) return <div>Error: {error}</div>
 
   return (
-    <ProtectedRoute>
-      <div className="min-h-screen p-8">
-        {/* Header */}
-        <Header />
+    <div className="min-h-screen p-8">
+      {/* Header */}
+      <Header />
 
-        <div className="max-w-2xl mx-auto">
-          {/* Daily Progress Bar */}
-          <div className="bg-white p-4 rounded-lg shadow-md mb-6">
-            <div className="flex justify-between items-center mb-2">
-              <h3 className="text-lg font-semibold text-black">Daily Progress</h3>
-              <div className="flex items-center gap-4">
-                <span className="text-black font-medium">{dailyCorrectCount} / {dailyGoal} correct answers</span>
-                <button
-                  onClick={toggleReview}
-                  className="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 transition-colors"
-                >
-                  {showReview ? 'Back to Quiz' : 'Review Today'}
-                </button>
+      <div className="max-w-2xl mx-auto">
+        {/* Daily Progress Bar */}
+        <div className="bg-white p-4 rounded-lg shadow-md mb-6">
+          <div className="flex justify-between items-center mb-2">
+            <h3 className="text-lg font-semibold text-black">Daily Progress</h3>
+            <div className="flex items-center gap-4">
+              <span className="text-black font-medium">{dailyCorrectCount} / {dailyGoal} correct answers</span>
+              <button
+                onClick={toggleReview}
+                className="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 transition-colors"
+              >
+                {showReview ? 'Back to Quiz' : 'Review Today'}
+              </button>
+            </div>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-4">
+            <div 
+              className="bg-green-500 h-4 rounded-full transition-all duration-500 ease-in-out"
+              style={{ width: `${Math.min(100, (dailyCorrectCount / dailyGoal) * 100)}%` }}
+            ></div>
+          </div>
+          {dailyCorrectCount >= dailyGoal && (
+            <p className="text-green-600 font-medium mt-2">
+              🎉 Congratulations! You{"'"}ve reached your daily goal!
+            </p>
+          )}
+        </div>
+
+        {showReview ? (
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <h2 className="text-2xl font-bold mb-4 text-black">Today{"'"}s Review</h2>
+            
+            {todayLogs.length > 0 ? (
+              <div className="space-y-4">
+                {todayLogs.map((log) => (
+                  <div key={log.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="text-xl font-bold text-black">{log.word?.name}</h3>
+                        <p className="text-gray-600">{log.word?.speech} • Level {log.word?.level}</p>
+                      </div>
+                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                        log.result === 1 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {log.result === 1 ? 'Correct' : 'Incorrect'}
+                      </span>
+                    </div>
+                    
+                    <div className="mt-3">
+                      <p className="text-black"><span className="font-medium">Meaning:</span> {log.word?.meaning}</p>
+                      <p className="text-black mt-1"><span className="font-medium">Example:</span> <span className="italic">{log.word?.example_sentence}</span></p>
+                    </div>
+                    
+                    <div className="mt-2 flex justify-between items-center text-sm">
+                      <span className="text-gray-500">
+                        {formatDate(log.created_at)}
+                      </span>
+                      <span className="text-blue-600">
+                        {log.attempts} {log.attempts === 1 ? "attempt" : "attempts"} today
+                      </span>
+                    </div>
+                  </div>
+                ))}
               </div>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-4">
-              <div 
-                className="bg-green-500 h-4 rounded-full transition-all duration-500 ease-in-out"
-                style={{ width: `${Math.min(100, (dailyCorrectCount / dailyGoal) * 100)}%` }}
-              ></div>
-            </div>
-            {dailyCorrectCount >= dailyGoal && (
-              <p className="text-green-600 font-medium mt-2">
-                🎉 Congratulations! You{"'"}ve reached your daily goal!
-              </p>
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-gray-500">No quiz activity today. Start taking quizzes!</p>
+              </div>
             )}
           </div>
-
-          {showReview ? (
+        ) : (
+          <div className="space-y-6" onKeyDown={handleKeyPress}>
             <div className="bg-white p-6 rounded-lg shadow-md">
-              <h2 className="text-2xl font-bold mb-4 text-black">Today{"'"}s Review</h2>
+              <h2 className="text-2xl font-bold mb-4 text-black">Word Quiz</h2>
               
-              {todayLogs.length > 0 ? (
-                <div className="space-y-4">
-                  {todayLogs.map((log) => (
-                    <div key={log.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="text-xl font-bold text-black">{log.word?.name}</h3>
-                          <p className="text-gray-600">{log.word?.speech} • Level {log.word?.level}</p>
-                        </div>
-                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                          log.result === 1 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-red-100 text-red-800'
-                        }`}>
-                          {log.result === 1 ? 'Correct' : 'Incorrect'}
-                        </span>
-                      </div>
-                      
-                      <div className="mt-3">
-                        <p className="text-black"><span className="font-medium">Meaning:</span> {log.word?.meaning}</p>
-                        <p className="text-black mt-1"><span className="font-medium">Example:</span> <span className="italic">{log.word?.example_sentence}</span></p>
-                      </div>
-                      
-                      <div className="mt-2 flex justify-between items-center text-sm">
-                        <span className="text-gray-500">
-                          {formatDate(log.created_at)}
-                        </span>
-                        <span className="text-blue-600">
-                          {log.attempts} {log.attempts === 1 ? "attempt" : "attempts"} today
-                        </span>
-                      </div>
+              <div className="space-y-4">
+                <div>
+                  <p className="font-semibold text-black">Part of Speech: {currentWord?.speech}</p>
+                  <p className="font-semibold text-black">Level: {currentWord?.level}</p>
+                  <p className="mt-2 text-black">Meaning: {currentWord?.meaning}</p>
+                  <p className="mt-2 italic text-black">Example: {randomSentence?.replace(currentWord?.name || '', '_'.repeat(currentWord?.name?.length || 0))}</p>
+                </div>
+
+                {/* Letter boxes */}
+                <div className="flex justify-center gap-2 my-6 text-black">
+                  {Array.from({length: currentWord?.name?.length || 0}).map((_, index) => (
+                    <div
+                      key={index}
+                      className={`
+                        w-12 h-12 border-2 flex items-center justify-center text-xl font-bold
+                        ${showResult && isCorrect ? 'border-green-500 bg-green-100 text-black' : ''}
+                        ${showResult && !isCorrect ? 'border-red-500 bg-red-100 text-black' : ''}
+                        ${!showResult ? 'border-gray-300 text-black' : ''}
+                      `}
+                    >
+                      {revealedHints.includes(index) ? currentWord?.name[index] : (userInput[index] || '')}
                     </div>
                   ))}
                 </div>
-              ) : (
-                <div className="text-center py-12">
-                  <p className="text-gray-500">No quiz activity today. Start taking quizzes!</p>
+
+                <div className="mt-4">
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={userInput}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border rounded text-black"
+                    placeholder="Type your answer..."
+                    maxLength={currentWord?.name.length}
+                    disabled={showResult && isCorrect}
+                    autoFocus
+                  />
                 </div>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-6" onKeyDown={handleKeyPress}>
-              <div className="bg-white p-6 rounded-lg shadow-md">
-                <h2 className="text-2xl font-bold mb-4 text-black">Word Quiz</h2>
-                
-                <div className="space-y-4">
-                  <div>
-                    <p className="font-semibold text-black">Part of Speech: {currentWord?.speech}</p>
-                    <p className="font-semibold text-black">Level: {currentWord?.level}</p>
-                    <p className="mt-2 text-black">Meaning: {currentWord?.meaning}</p>
-                    <p className="mt-2 italic text-black">Example: {randomSentence?.replace(currentWord?.name || '', '_'.repeat(currentWord?.name?.length || 0))}</p>
-                  </div>
 
-                  {/* Letter boxes */}
-                  <div className="flex justify-center gap-2 my-6 text-black">
-                    {Array.from({length: currentWord?.name?.length || 0}).map((_, index) => (
-                      <div
-                        key={index}
-                        className={`
-                          w-12 h-12 border-2 flex items-center justify-center text-xl font-bold
-                          ${showResult && isCorrect ? 'border-green-500 bg-green-100 text-black' : ''}
-                          ${showResult && !isCorrect ? 'border-red-500 bg-red-100 text-black' : ''}
-                          ${!showResult ? 'border-gray-300 text-black' : ''}
-                        `}
-                      >
-                        {revealedHints.includes(index) ? currentWord?.name[index] : (userInput[index] || '')}
-                      </div>
-                    ))}
-                  </div>
+                {/* Hint, Show Answer, and Skip buttons */}
+                <div className="flex gap-2 justify-center mt-4">
+                  <button
+                    onClick={showLetterHint}
+                    className="px-4 py-2 bg-gray-200 text-gray-600 rounded hover:bg-gray-600 hover:text-white"
+                    disabled={showResult && isCorrect}
+                  >
+                    Show Hint
+                  </button>
+                  <button
+                    onClick={() => setShowAnswer(true)}
+                    className="px-4 py-2 bg-gray-200 text-gray-600 rounded hover:bg-gray-600 hover:text-white"
+                    disabled={showResult && isCorrect}
+                  >
+                    Show Answer
+                  </button>
+                  <button
+                    onClick={handleSkipWord}
+                    className="px-4 py-2 bg-yellow-200 text-yellow-700 rounded hover:bg-yellow-300"
+                    disabled={showResult && isCorrect}
+                  >
+                    Skip Word
+                  </button>
+                </div>
 
-                  <div className="mt-4">
-                    <input
-                      ref={inputRef}
-                      type="text"
-                      value={userInput}
-                      onChange={handleInputChange}
-                      className="w-full p-2 border rounded text-black"
-                      placeholder="Type your answer..."
-                      maxLength={currentWord?.name.length}
-                      disabled={showResult && isCorrect}
-                      autoFocus
-                    />
-                  </div>
-
-                  {/* Hint, Show Answer, and Skip buttons */}
-                  <div className="flex gap-2 justify-center mt-4">
-                    <button
-                      onClick={showLetterHint}
-                      className="px-4 py-2 bg-gray-200 text-gray-600 rounded hover:bg-gray-600 hover:text-white"
-                      disabled={showResult && isCorrect}
-                    >
-                      Show Hint
-                    </button>
-                    <button
-                      onClick={() => setShowAnswer(true)}
-                      className="px-4 py-2 bg-gray-200 text-gray-600 rounded hover:bg-gray-600 hover:text-white"
-                      disabled={showResult && isCorrect}
-                    >
-                      Show Answer
-                    </button>
-                    <button
-                      onClick={handleSkipWord}
-                      className="px-4 py-2 bg-yellow-200 text-yellow-700 rounded hover:bg-yellow-300"
-                      disabled={showResult && isCorrect}
-                    >
-                      Skip Word
-                    </button>
-                  </div>
-
-                  {/* Show result */}
-                  {showResult && (
-                    <div className={`mt-6 p-4 rounded ${isCorrect ? 'bg-green-100' : 'bg-red-100'}`}>
-                      <p className={`text-lg font-bold ${isCorrect ? 'text-green-700' : 'text-red-700'}`}>
-                        {isCorrect ? 'Correct!' : 'Incorrect!'}
+                {/* Show result */}
+                {showResult && (
+                  <div className={`mt-6 p-4 rounded ${isCorrect ? 'bg-green-100' : 'bg-red-100'}`}>
+                    <p className={`text-lg font-bold ${isCorrect ? 'text-green-700' : 'text-red-700'}`}>
+                      {isCorrect ? 'Correct!' : 'Incorrect!'}
+                    </p>
+                    {!isCorrect && (
+                      <p className="mt-2 text-black">
+                        The correct answer is: <span className="font-bold">{currentWord?.name}</span>
                       </p>
-                      {!isCorrect && (
-                        <p className="mt-2 text-black">
-                          The correct answer is: <span className="font-bold">{currentWord?.name}</span>
-                        </p>
-                      )}
-                      <div className="mt-4 flex gap-2">
-                        <button
-                          onClick={handleNextWord}
-                          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                        >
-                          Next Word
-                        </button>
-                        {!isCorrect && (
-                          <button
-                            onClick={handleTryAgain}
-                            className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
-                          >
-                            Try Again
-                          </button>
-                        )}
-                      </div>
-                      <p className="text-sm text-gray-500 mt-2">Press Enter to continue to the next word</p>
-                    </div>
-                  )}
-
-                  {/* Show answer */}
-                  {showAnswer && !showResult && (
-                    <div className="mt-6 p-4 bg-blue-100 rounded">
-                      <p className="text-black">
-                        The answer is: <span className="font-bold">{currentWord?.name}</span>
-                      </p>
+                    )}
+                    <div className="mt-4 flex gap-2">
                       <button
                         onClick={handleNextWord}
-                        className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                        className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
                       >
                         Next Word
                       </button>
-                      <p className="text-sm text-gray-500 mt-2">Press Enter to continue to the next word</p>
+                      {!isCorrect && (
+                        <button
+                          onClick={handleTryAgain}
+                          className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+                        >
+                          Try Again
+                        </button>
+                      )}
                     </div>
-                  )}
-                </div>
-              </div>
-
-              {/* History Section */}
-              <div className="bg-white p-6 rounded-lg shadow-md mt-8">
-                <h3 className="text-xl font-bold mb-4 text-black">Attempt History</h3>
-                {history.length > 0 ? (
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full table-auto">
-                      <thead>
-                        <tr className="bg-gray-100 text-black">
-                          <th className="px-4 py-2 text-left">#</th>
-                          <th className="px-4 py-2 text-left">Date</th>
-                          <th className="px-4 py-2 text-left">Result</th>
-                        </tr>
-                      </thead>
-                      <tbody className="text-black">
-                        {history.map((entry, index) => (
-                          <tr key={entry.id} className="border-t">
-                            <td className="px-4 py-2">{index + 1}</td>
-                            <td className="px-4 py-2">{formatDate(entry.created_at)}</td>
-                            <td className="px-4 py-2">
-                              <span className={entry.result === 1 ? 'text-green-600' : 'text-red-600'}>
-                                {entry.result === 1 ? 'Correct' : 'Incorrect'}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                    <p className="text-sm text-gray-500 mt-2">Press Enter to continue to the next word</p>
                   </div>
-                ) : (
-                  <p className="text-gray-500">No history available for this word.</p>
+                )}
+
+                {/* Show answer */}
+                {showAnswer && !showResult && (
+                  <div className="mt-6 p-4 bg-blue-100 rounded">
+                    <p className="text-black">
+                      The answer is: <span className="font-bold">{currentWord?.name}</span>
+                    </p>
+                    <button
+                      onClick={handleNextWord}
+                      className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                    >
+                      Next Word
+                    </button>
+                    <p className="text-sm text-gray-500 mt-2">Press Enter to continue to the next word</p>
+                  </div>
                 )}
               </div>
             </div>
-          )}
-        </div>
+
+            {/* History Section */}
+            <div className="bg-white p-6 rounded-lg shadow-md mt-8">
+              <h3 className="text-xl font-bold mb-4 text-black">Attempt History</h3>
+              {history.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full table-auto">
+                    <thead>
+                      <tr className="bg-gray-100 text-black">
+                        <th className="px-4 py-2 text-left">#</th>
+                        <th className="px-4 py-2 text-left">Date</th>
+                        <th className="px-4 py-2 text-left">Result</th>
+                      </tr>
+                    </thead>
+                    <tbody className="text-black">
+                      {history.map((entry, index) => (
+                        <tr key={entry.id} className="border-t">
+                          <td className="px-4 py-2">{index + 1}</td>
+                          <td className="px-4 py-2">{formatDate(entry.created_at)}</td>
+                          <td className="px-4 py-2">
+                            <span className={entry.result === 1 ? 'text-green-600' : 'text-red-600'}>
+                              {entry.result === 1 ? 'Correct' : 'Incorrect'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-gray-500">No history available for this word.</p>
+              )}
+            </div>
+          </div>
+        )}
       </div>
-    </ProtectedRoute>
+    </div>
   )
 }
