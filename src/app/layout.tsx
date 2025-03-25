@@ -2,7 +2,6 @@
 import { AuthProvider } from '../contexts/AuthContext'
 import { Geist, Geist_Mono } from "next/font/google";
 import BottomNav from '../components/BottomNav'
-import DebugInfo from '../components/DebugInfo'
 import AuthCheck from '../components/AuthCheck'
 import "./globals.css";
 
@@ -38,7 +37,6 @@ export default function RootLayout({
             </div>
             <BottomNav />
           </AuthCheck>
-          <DebugInfo />
         </AuthProvider>
       </body>
     </html>
