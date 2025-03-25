@@ -107,6 +107,12 @@ export default function QuizPage() {
   // Fetch daily correct count
   const fetchDailyCorrectCount = useCallback(async () => {
     try {
+      // Skip if user ID isn't available
+      if (!user?.id) {
+        console.log('No user found, skipping daily count fetch');
+        return;
+      }
+      
       // Get today's date in ISO format (YYYY-MM-DD)
       const today = new Date().toISOString().split('T')[0]
       
@@ -125,17 +131,30 @@ export default function QuizPage() {
       
       const { error, count } = await query
 
-      if (error) throw error
+      if (error) {
+        console.error('Error fetching daily correct count:', error);
+        // Don't set global error for this less critical function
+        return;
+      }
+      
       setDailyCorrectCount(count || 0)
     } catch (error) {
       console.error('Error fetching daily correct count:', error)
+      // Don't set global error for this less critical function
     }
   }, [user?.id])
 
   // Fetch a random word from Supabase with weighted probability based on score
   const fetchRandomWord = useCallback(async () => {
     try {
-      if (!user?.id) return;
+      setLoading(true);
+      
+      // Check if user exists before attempting to fetch data
+      if (!user?.id) {
+        console.log('No user found, skipping word fetch');
+        setLoading(false);
+        return;
+      }
       
       // Only fetch words that are either from Oxford or added by the current user
       const { data, error } = await supabase
@@ -146,12 +165,14 @@ export default function QuizPage() {
       if (error) {
         console.error('Error fetching words:', error)
         setError(error instanceof Error ? error.message : 'An unknown error occurred')
+        setLoading(false)
         return
       }
 
       if (!data || data.length === 0) {
         console.error('No words found in database')
         setError('No words found in database')
+        setLoading(false)
         return
       }
 
@@ -389,6 +410,13 @@ export default function QuizPage() {
     try {
       setLoading(true)
       
+      // Check if user exists before attempting to fetch data
+      if (!user?.id) {
+        console.log('No user found, skipping today logs fetch');
+        setLoading(false);
+        return;
+      }
+      
       // Get today's date in ISO format (YYYY-MM-DD)
       const today = new Date().toISOString().split('T')[0]
       
@@ -407,7 +435,12 @@ export default function QuizPage() {
       
       const { data: logData, error: logError } = await logQuery;
 
-      if (logError) throw logError
+      if (logError) {
+        console.error("Error fetching logs:", logError);
+        setError(logError.message || "Failed to fetch today's logs");
+        setLoading(false);
+        return;
+      }
 
       if (!logData || logData.length === 0) {
         setTodayLogs([])
@@ -424,7 +457,12 @@ export default function QuizPage() {
         .select('*')
         .in('id', wordIds)
 
-      if (wordsError) throw wordsError
+      if (wordsError) {
+        console.error("Error fetching words:", wordsError);
+        setError(wordsError.message || "Failed to fetch word details");
+        setLoading(false);
+        return;
+      }
 
       // Create a map of word IDs to word objects
       const wordMap = (wordsData || []).reduce((acc: {[key: number]: Word}, word) => {
@@ -459,6 +497,7 @@ export default function QuizPage() {
       setTodayLogs(Object.values(wordResults))
     } catch (error) {
       console.error("Error fetching today's logs:", error)
+      setError(error instanceof Error ? error.message : "An unknown error occurred")
     } finally {
       setLoading(false)
     }
@@ -466,13 +505,31 @@ export default function QuizPage() {
 
   // Modify the useEffect to include fetchTodayLogs when showing review
   useEffect(() => {
-    if (showReview) {
-      void fetchTodayLogs()
-    } else {
-      void fetchRandomWord()
-      void fetchDailyCorrectCount()
+    // Only proceed if we're not in a loading state from AuthContext
+    const loadData = async () => {
+      if (showReview) {
+        await fetchTodayLogs();
+      } else {
+        await fetchRandomWord();
+        await fetchDailyCorrectCount();
+      }
+    };
+    
+    // Don't run data fetching if user isn't available yet
+    if (!user?.id) {
+      // Set a reasonable timeout to prevent endless loading if auth fails
+      const timer = setTimeout(() => {
+        if (loading) {
+          setLoading(false);
+          setError("Please sign in to access the quiz.");
+        }
+      }, 3000);
+      
+      return () => clearTimeout(timer);
     }
-  }, [fetchRandomWord, fetchDailyCorrectCount, fetchTodayLogs, showReview])
+    
+    loadData();
+  }, [fetchRandomWord, fetchDailyCorrectCount, fetchTodayLogs, showReview, user?.id]);
 
   // Add a function to toggle the review mode
   const toggleReview = () => {
@@ -496,8 +553,38 @@ export default function QuizPage() {
     }
   }
 
-  if (loading) return <div>Loading...</div>
-  if (error) return <div>Error: {error}</div>
+  if (loading) return (
+    <div className="min-h-screen p-8">
+      <Header />
+      <div className="max-w-2xl mx-auto mt-8">
+        <div className="bg-white p-6 rounded-lg shadow-md text-center">
+          <div className="animate-pulse flex flex-col items-center">
+            <div className="h-12 bg-gray-200 rounded w-48 mb-4"></div>
+            <div className="h-6 bg-gray-200 rounded w-32"></div>
+          </div>
+          <p className="mt-4 text-gray-600">Loading your quiz, please wait...</p>
+        </div>
+      </div>
+    </div>
+  )
+
+  if (error) return (
+    <div className="min-h-screen p-8">
+      <Header />
+      <div className="max-w-2xl mx-auto mt-8">
+        <div className="bg-white p-6 rounded-lg shadow-md text-center">
+          <p className="text-red-500 font-medium text-lg mb-2">{error}</p>
+          {error.includes("sign in") && (
+            <button 
+              onClick={() => window.location.href = '/signin'} 
+              className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+              Go to Sign In
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
 
   return (
     <div className="min-h-screen p-8">
